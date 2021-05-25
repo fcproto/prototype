@@ -16,7 +16,8 @@ func (s *Speed) Reset() {
 
 func NewSensor() sensor.Sensor {
 	return &Speed{
-		curr_speed: 0.0,
+		curr_speed:   0.0,
+		accelerating: true,
 	}
 }
 
