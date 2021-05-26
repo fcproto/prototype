@@ -23,7 +23,7 @@ func main() {
 		log.Printf("getting speed value %d: %v", i, speedSensor.GetValues())
 	}
 
-	tempSensor := temperature.NewSensor()
+	tempSensor := temperature.NewEnvironmentSensor()
 
 	for i := 0; i < 10; i++ {
 		log.Printf("getting temperature value %d: %v", i, tempSensor.GetValues())
