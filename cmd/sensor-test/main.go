@@ -5,6 +5,7 @@ import (
 
 	"github.com/fcproto/prototype/pkg/sensor/dummy"
 	"github.com/fcproto/prototype/pkg/sensor/speed"
+	"github.com/fcproto/prototype/pkg/sensor/temperature"
 )
 
 func main() {
@@ -13,12 +14,18 @@ func main() {
 	dummySensor := dummy.NewSensor()
 
 	for i := 0; i < 10; i++ {
-		log.Printf("getting value %d: %v", i, dummySensor.GetValues())
+		log.Printf("getting dummy value %d: %v", i, dummySensor.GetValues())
 	}
 
 	speedSensor := speed.NewSensor()
 
 	for i := 0; i < 10; i++ {
-		log.Printf("getting value %d: %v", i, speedSensor.GetValues())
+		log.Printf("getting speed value %d: %v", i, speedSensor.GetValues())
+	}
+
+	tempSensor := temperature.NewSensor()
+
+	for i := 0; i < 10; i++ {
+		log.Printf("getting temperature value %d: %v", i, tempSensor.GetValues())
 	}
 }
