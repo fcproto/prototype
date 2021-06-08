@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/fcproto/prototype/pkg/sensor/compass"
 	"github.com/fcproto/prototype/pkg/sensor/dummy"
 	"github.com/fcproto/prototype/pkg/sensor/speed"
 	"github.com/fcproto/prototype/pkg/sensor/temperature"
@@ -27,5 +28,11 @@ func main() {
 
 	for i := 0; i < 10; i++ {
 		log.Printf("getting temperature value %d: %v", i, tempSensor.GetValues())
+	}
+
+	compSensor := compass.NewSensor()
+
+	for i := 0; i < 10; i++ {
+		log.Printf("getting compass value %d: %v", i, compSensor.GetValues())
 	}
 }
