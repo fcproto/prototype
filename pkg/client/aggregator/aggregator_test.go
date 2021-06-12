@@ -1,4 +1,4 @@
-package collector
+package aggregator
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testAggType(t *testing.T, aggType AggregatorType, results []float64) {
+func testAggType(t *testing.T, aggType Type, results []float64) {
 	req := require.New(t)
 	agg := NewAggregator(aggType, 3)
 
@@ -31,19 +31,19 @@ func testAggType(t *testing.T, aggType AggregatorType, results []float64) {
 
 func TestAggregator(t *testing.T) {
 	testCases := []struct {
-		aggType AggregatorType
+		aggType Type
 		results []float64
 	}{
 		{
-			AggregatorType_AVG,
+			TypeAvg,
 			[]float64{2, 3},
 		},
 		{
-			AggregatorType_MIN,
+			TypeMin,
 			[]float64{1, 2},
 		},
 		{
-			AggregatorType_MAX,
+			TypeMax,
 			[]float64{3, 4},
 		},
 	}

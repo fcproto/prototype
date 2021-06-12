@@ -13,16 +13,15 @@ type SensorData struct {
 	Sensors   map[string]sensor.Values `json:"sensors"`
 }
 
+func NewSensorData() *SensorData {
+	return &SensorData{
+		Timestamp: time.Now(),
+		Sensors:   make(map[string]sensor.Values),
+	}
+}
+
 func (r *SensorData) String() string {
 	var builder strings.Builder
 	_ = json.NewEncoder(&builder).Encode(&r)
 	return builder.String()
-}
-
-// TODO
-type Service struct {
-}
-
-func (s *Service) SubmitSensorData(data *SensorData) {
-
 }
