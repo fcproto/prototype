@@ -7,35 +7,25 @@ import (
 )
 
 type Temperature struct {
-	key      string
-	t        float64
-	baseTemp float64
+	t, baseTemp, amplitude float64
 }
 
 func (t *Temperature) Reset() {
 	t.t = 0
 }
 
-func NewEnvironmentSensor() sensor.Sensor {
+func New(baseTemp, amplitude float64) sensor.Sensor {
 	return &Temperature{
-		key:      "environment",
-		t:        0,
-		baseTemp: 25,
-	}
-}
-
-func NewTrackSensor() sensor.Sensor {
-	return &Temperature{
-		key:      "track",
-		t:        0,
-		baseTemp: 30,
+		t:         0,
+		baseTemp:  baseTemp,
+		amplitude: amplitude,
 	}
 }
 
 func (t *Temperature) GetValues() sensor.Values {
-	temp := t.baseTemp + 3*math.Sin(t.t)
+	temp := t.baseTemp + t.amplitude*math.Sin(t.t)
 	t.t += 0.05
 	return sensor.Values{
-		t.key: temp,
+		"temperature": temp,
 	}
 }

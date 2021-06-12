@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -11,6 +12,19 @@ const (
 	AggregatorType_MIN AggregatorType = iota
 	AggregatorType_MAX AggregatorType = iota
 )
+
+func (at AggregatorType) String() string {
+	switch at {
+	case AggregatorType_AVG:
+		return "AVG"
+	case AggregatorType_MIN:
+		return "MIN"
+	case AggregatorType_MAX:
+		return "MAX"
+	default:
+		return "UNKNOWN"
+	}
+}
 
 type Aggregator struct {
 	aggType     AggregatorType
@@ -29,6 +43,12 @@ func NewAggregator(aggType AggregatorType, size int) *Aggregator {
 	}
 }
 
+func (a *Aggregator) String() string {
+	a.valuesMutex.Lock()
+	defer a.valuesMutex.Unlock()
+	return fmt.Sprintf("{type=%s, index=%d, filled=%t, values=%v}", a.aggType.String(), a.index, a.filled, a.values)
+}
+
 func (a *Aggregator) AddValue(v float64) {
 	a.valuesMutex.Lock()
 	defer a.valuesMutex.Unlock()
@@ -41,8 +61,27 @@ func (a *Aggregator) AddValue(v float64) {
 	}
 }
 
-// arithmetic mean
-func (a *Aggregator) aggregateAvg() float64 {
+func reducerSum(a, b float64) float64 {
+	return a + b
+}
+
+func reducerMin(a, b float64) float64 {
+	if a > b {
+		return b
+	} else {
+		return a
+	}
+}
+
+func reducerMax(a, b float64) float64 {
+	if a > b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func (a *Aggregator) aggregateFn(reducer func(float64, float64) float64, divBySize bool) float64 {
 	a.valuesMutex.RLock()
 	defer a.valuesMutex.RUnlock()
 
@@ -58,22 +97,23 @@ func (a *Aggregator) aggregateAvg() float64 {
 
 	agg := a.values[0]
 	for i := 1; i < size; i++ {
-		agg += a.values[i]
+		agg = reducer(agg, a.values[i])
 	}
 
-	return agg / float64(size)
+	if divBySize {
+		return agg / float64(size)
+	}
+	return agg
 }
 
 func (a *Aggregator) Aggregate() float64 {
 	switch a.aggType {
 	case AggregatorType_MIN:
-		// TODO
-		return 0
+		return a.aggregateFn(reducerMin, false)
 	case AggregatorType_MAX:
-		// TODO
-		return 0
+		return a.aggregateFn(reducerMax, false)
+	default:
+		// default is avg
+		return a.aggregateFn(reducerSum, true)
 	}
-
-	// default is avg
-	return a.aggregateAvg()
 }
