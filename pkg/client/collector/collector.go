@@ -4,18 +4,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fcproto/prototype/pkg/client/api"
+	"github.com/fcproto/prototype/pkg/api"
+	"github.com/fcproto/prototype/pkg/client/aggregator"
 	"github.com/fcproto/prototype/pkg/logger"
 	"github.com/fcproto/prototype/pkg/sensor"
 	"github.com/ipfs/go-log/v2"
 )
 
-type AggregateValues map[string]AggregatorType
+type AggregateValues map[string]aggregator.Type
 
 // internal struct used for storing the sensor and the required aggregators
 type collectSensor struct {
 	sensor      sensor.Sensor
-	aggregators map[string]*Aggregator
+	aggregators map[string]*aggregator.Aggregator
 }
 
 func (cs *collectSensor) refresh() {
@@ -67,10 +68,10 @@ func (c *Collector) RegisterSensor(name string, sensor sensor.Sensor, agg ...Agg
 	c.sensorsMutex.Lock()
 	defer c.sensorsMutex.Unlock()
 
-	aggregators := make(map[string]*Aggregator)
+	aggregators := make(map[string]*aggregator.Aggregator)
 	for _, aggEl := range agg {
 		for v, t := range aggEl {
-			aggregators[v] = NewAggregator(t, 5)
+			aggregators[v] = aggregator.NewAggregator(t, 5)
 		}
 	}
 	c.log.Debugf("adding new sensor: %s", name)
@@ -83,10 +84,7 @@ func (c *Collector) RegisterSensor(name string, sensor sensor.Sensor, agg ...Agg
 func (c *Collector) Collect() *api.SensorData {
 	c.sensorsMutex.Lock()
 	defer c.sensorsMutex.Unlock()
-	res := &api.SensorData{
-		Timestamp: time.Now(),
-		Sensors:   make(map[string]sensor.Values),
-	}
+	res := api.NewSensorData()
 	for k, v := range c.sensors {
 		res.Sensors[k] = v.getValues()
 	}

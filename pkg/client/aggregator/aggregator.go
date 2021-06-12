@@ -1,25 +1,25 @@
-package collector
+package aggregator
 
 import (
 	"fmt"
 	"sync"
 )
 
-type AggregatorType byte
+type Type byte
 
 const (
-	AggregatorType_AVG AggregatorType = iota
-	AggregatorType_MIN AggregatorType = iota
-	AggregatorType_MAX AggregatorType = iota
+	TypeAvg Type = iota
+	TypeMin Type = iota
+	TypeMax Type = iota
 )
 
-func (at AggregatorType) String() string {
+func (at Type) String() string {
 	switch at {
-	case AggregatorType_AVG:
+	case TypeAvg:
 		return "AVG"
-	case AggregatorType_MIN:
+	case TypeMin:
 		return "MIN"
-	case AggregatorType_MAX:
+	case TypeMax:
 		return "MAX"
 	default:
 		return "UNKNOWN"
@@ -27,14 +27,14 @@ func (at AggregatorType) String() string {
 }
 
 type Aggregator struct {
-	aggType     AggregatorType
+	aggType     Type
 	index       int
 	valuesMutex sync.RWMutex
 	values      []float64
 	filled      bool
 }
 
-func NewAggregator(aggType AggregatorType, size int) *Aggregator {
+func NewAggregator(aggType Type, size int) *Aggregator {
 	return &Aggregator{
 		aggType: aggType,
 		index:   0,
@@ -108,9 +108,9 @@ func (a *Aggregator) aggregateFn(reducer func(float64, float64) float64, divBySi
 
 func (a *Aggregator) Aggregate() float64 {
 	switch a.aggType {
-	case AggregatorType_MIN:
+	case TypeMin:
 		return a.aggregateFn(reducerMin, false)
-	case AggregatorType_MAX:
+	case TypeMax:
 		return a.aggregateFn(reducerMax, false)
 	default:
 		// default is avg
