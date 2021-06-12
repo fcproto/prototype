@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fcproto/prototype/pkg/client/api"
 	"github.com/fcproto/prototype/pkg/logger"
 	"github.com/fcproto/prototype/pkg/sensor"
 	"github.com/ipfs/go-log/v2"
@@ -44,11 +45,6 @@ func (cs *collectSensor) getValues() sensor.Values {
 	return values
 }
 
-type Result struct {
-	Timestamp time.Time
-	Sensors   map[string]sensor.Values
-}
-
 type Collector struct {
 	log        *log.ZapEventLogger
 	interval   time.Duration
@@ -84,10 +80,10 @@ func (c *Collector) RegisterSensor(name string, sensor sensor.Sensor, agg ...Agg
 	}
 }
 
-func (c *Collector) Collect() *Result {
+func (c *Collector) Collect() *api.SensorData {
 	c.sensorsMutex.Lock()
 	defer c.sensorsMutex.Unlock()
-	res := &Result{
+	res := &api.SensorData{
 		Timestamp: time.Now(),
 		Sensors:   make(map[string]sensor.Values),
 	}
@@ -100,7 +96,7 @@ func (c *Collector) Collect() *Result {
 func (c *Collector) refreshSensors() {
 	c.sensorsMutex.Lock()
 	defer c.sensorsMutex.Unlock()
-	c.log.Debug("refreshing sensors...")
+	//c.log.Debug("refreshing sensors...")
 	for _, v := range c.sensors {
 		v.refresh()
 	}
