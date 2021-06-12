@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,14 +20,14 @@ func main() {
 	log.Info("starting edge service...")
 
 	c := collector.New()
+	log.Info("registering sensors...")
 	c.RegisterSensor("speed", speed.NewSensor())
-	c.RegisterSensor("temperature/env", temperature.NewEnvironmentSensor(), collector.AggregateValues{
-		"environment": collector.AggregatorType_AVG,
+	c.RegisterSensor("temperature/env", temperature.New(25, 2), collector.AggregateValues{
+		"temperature": collector.AggregatorType_AVG,
 	})
-	c.RegisterSensor("temperature/track", temperature.NewTrackSensor(), collector.AggregateValues{
-		"track": collector.AggregatorType_AVG,
+	c.RegisterSensor("temperature/track", temperature.New(30, 3), collector.AggregateValues{
+		"temperature": collector.AggregatorType_AVG,
 	})
-
 	c.RegisterSensor("compass", compass.NewSensor())
 
 	go c.Start()
@@ -36,10 +37,11 @@ func main() {
 
 	for {
 		select {
-		case <-time.After(7 * time.Second):
-			log.Debug(c.Collect())
+		case <-time.After(3 * time.Second):
+			fmt.Print(c.Collect())
 		case <-ctx.Done():
 			log.Info("stopping service...")
+			c.Stop()
 			return
 		}
 	}
