@@ -1,8 +1,7 @@
 package main
 
 import (
-	"log"
-
+	"github.com/fcproto/prototype/pkg/logger"
 	"github.com/fcproto/prototype/pkg/sensor/compass"
 	"github.com/fcproto/prototype/pkg/sensor/dummy"
 	"github.com/fcproto/prototype/pkg/sensor/speed"
@@ -10,29 +9,30 @@ import (
 )
 
 func main() {
-	log.Println("starting")
+	log := logger.New("sensor-test")
+	log.Info("starting")
 
 	dummySensor := dummy.NewSensor()
 
 	for i := 0; i < 10; i++ {
-		log.Printf("getting dummy value %d: %v", i, dummySensor.GetValues())
+		log.Infof("getting dummy value %d: %v", i, dummySensor.GetValues())
 	}
 
 	speedSensor := speed.NewSensor()
 
 	for i := 0; i < 10; i++ {
-		log.Printf("getting speed value %d: %v", i, speedSensor.GetValues())
+		log.Infof("getting speed value %d: %v", i, speedSensor.GetValues())
 	}
 
 	tempSensor := temperature.NewEnvironmentSensor()
 
 	for i := 0; i < 10; i++ {
-		log.Printf("getting temperature value %d: %v", i, tempSensor.GetValues())
+		log.Infof("getting temperature value %d: %v", i, tempSensor.GetValues())
 	}
 
 	compSensor := compass.NewSensor()
 
 	for i := 0; i < 10; i++ {
-		log.Printf("getting compass value %d: %v", i, compSensor.GetValues())
+		log.Infof("getting compass value %d: %v", i, compSensor.GetValues())
 	}
 }
