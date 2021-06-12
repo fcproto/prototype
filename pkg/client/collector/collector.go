@@ -11,12 +11,13 @@ import (
 
 type AggregateValues map[string]AggregatorType
 
+// internal struct used for storing the sensor and the required aggregators
 type collectSensor struct {
 	sensor      sensor.Sensor
 	aggregators map[string]*Aggregator
 }
 
-func (cs *collectSensor) aggregate() {
+func (cs *collectSensor) refresh() {
 	if len(cs.aggregators) == 0 {
 		return
 	}
@@ -49,9 +50,9 @@ type Result struct {
 }
 
 type Collector struct {
-	log      *log.ZapEventLogger
-	interval time.Duration
-	ticker   *time.Ticker
+	log        *log.ZapEventLogger
+	interval   time.Duration
+	tickerDone chan struct{}
 
 	sensorsMutex sync.Mutex
 	sensors      map[string]*collectSensor
@@ -59,9 +60,10 @@ type Collector struct {
 
 func New() *Collector {
 	return &Collector{
-		log:      logger.New("collector"),
-		interval: time.Second,
-		sensors:  make(map[string]*collectSensor),
+		log:        logger.New("collector"),
+		interval:   time.Second,
+		tickerDone: make(chan struct{}),
+		sensors:    make(map[string]*collectSensor),
 	}
 }
 
@@ -72,7 +74,7 @@ func (c *Collector) RegisterSensor(name string, sensor sensor.Sensor, agg ...Agg
 	aggregators := make(map[string]*Aggregator)
 	for _, aggEl := range agg {
 		for v, t := range aggEl {
-			aggregators[v] = NewAggregator(t, 10)
+			aggregators[v] = NewAggregator(t, 5)
 		}
 	}
 	c.log.Debugf("adding new sensor: %s", name)
@@ -95,18 +97,29 @@ func (c *Collector) Collect() *Result {
 	return res
 }
 
+func (c *Collector) refreshSensors() {
+	c.sensorsMutex.Lock()
+	defer c.sensorsMutex.Unlock()
+	c.log.Debug("refreshing sensors...")
+	for _, v := range c.sensors {
+		v.refresh()
+	}
+}
+
 func (c *Collector) Start() {
-	c.ticker = time.NewTicker(c.interval)
-	for range c.ticker.C {
-		c.log.Debug("collecting data...")
-		c.sensorsMutex.Lock()
-		for _, v := range c.sensors {
-			v.aggregate()
+	ticker := time.NewTicker(c.interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			c.refreshSensors()
+		case <-c.tickerDone:
+			c.log.Debug("refreshing stopped")
+			return
 		}
-		c.sensorsMutex.Unlock()
 	}
 }
 
 func (c *Collector) Stop() {
-	c.ticker.Stop()
+	c.tickerDone <- struct{}{}
 }
