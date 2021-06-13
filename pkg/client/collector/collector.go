@@ -18,16 +18,18 @@ type Collector struct {
 	interval   time.Duration
 	tickerDone chan struct{}
 
-	sensorsMutex sync.Mutex
-	sensors      map[string]*sensorCollector
+	sensorsMutex   sync.Mutex
+	sensors        map[string]*sensorCollector
+	aggregatorSize int
 }
 
 func New() *Collector {
 	return &Collector{
-		log:        logger.New("collector"),
-		interval:   time.Second,
-		tickerDone: make(chan struct{}),
-		sensors:    make(map[string]*sensorCollector),
+		log:            logger.New("collector"),
+		interval:       time.Millisecond * 50,
+		tickerDone:     make(chan struct{}),
+		sensors:        make(map[string]*sensorCollector),
+		aggregatorSize: 100,
 	}
 }
 
@@ -35,7 +37,7 @@ func (c *Collector) RegisterSensor(name string, sensor sensor.Sensor, aggValues 
 	c.sensorsMutex.Lock()
 	defer c.sensorsMutex.Unlock()
 	c.log.Debugf("adding new sensor: %s", name)
-	c.sensors[name] = newSensorCollector(sensor, aggValues)
+	c.sensors[name] = newSensorCollector(sensor, aggValues, c.aggregatorSize)
 }
 
 func (c *Collector) Collect() *api.SensorData {
