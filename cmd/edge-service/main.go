@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fcproto/prototype/pkg/api"
+	"github.com/fcproto/prototype/pkg/client"
 	"github.com/fcproto/prototype/pkg/client/aggregator"
 	"github.com/fcproto/prototype/pkg/client/collector"
 	"github.com/fcproto/prototype/pkg/logger"
@@ -19,6 +21,7 @@ import (
 func main() {
 	log := logger.New("main")
 	log.Info("starting edge service...")
+	service := client.NewService("http://127.0.0.1:3000/sensors", 120)
 
 	c := collector.New()
 	log.Info("registering sensors...")
@@ -38,13 +41,25 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	for {
-		select {
-		case <-time.After(3 * time.Second):
-			fmt.Print(c.Collect())
-		case <-ctx.Done():
-			log.Info("stopping service...")
-			return
+	go func() {
+		for range time.Tick(time.Second) {
+			//log.Debug("collecting data...")
+			service.SubmitSensorData(c.Collect())
 		}
-	}
+	}()
+
+	go func() {
+		for range time.Tick(10 * time.Second) {
+			err := service.GetSensorData(func(data []*api.SensorData) error {
+				fmt.Println(data)
+				return nil
+			})
+			if err != nil {
+				log.Error(err)
+			}
+		}
+	}()
+
+	<-ctx.Done()
+	log.Info("stopping service...")
 }
