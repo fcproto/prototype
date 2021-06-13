@@ -14,11 +14,11 @@ type sensorCollector struct {
 	aggregators map[string]*aggregator.Aggregator
 }
 
-func newSensorCollector(sensor sensor.Sensor, aggValues []AggregateValues) *sensorCollector {
+func newSensorCollector(sensor sensor.Sensor, aggValues []AggregateValues, aggregatorSize int) *sensorCollector {
 	aggregators := make(map[string]*aggregator.Aggregator)
 	for _, aggVal := range aggValues {
 		for v, t := range aggVal {
-			aggregators[v] = aggregator.New(t, 5)
+			aggregators[v] = aggregator.New(t, aggregatorSize)
 		}
 	}
 	return &sensorCollector{

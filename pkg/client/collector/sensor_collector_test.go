@@ -51,7 +51,7 @@ func TestSensorCollector(t *testing.T) {
 	data := []float64{1, 2, 3}
 	sc := newSensorCollector(newMockSensor(data), []AggregateValues{{
 		"mock": aggregator.TypeMax,
-	}})
+	}}, 9)
 	req.EqualValues(0, sc.getValues()["mock"])
 	for _, val := range data {
 		sc.aggregate()
