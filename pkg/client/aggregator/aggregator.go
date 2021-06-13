@@ -34,7 +34,12 @@ type Aggregator struct {
 	filled      bool
 }
 
-func NewAggregator(aggType Type, size int) *Aggregator {
+// NewSingle only keeps the last added value
+func NewSingle() *Aggregator {
+	return New(TypeMin, 1)
+}
+
+func New(aggType Type, size int) *Aggregator {
 	return &Aggregator{
 		aggType: aggType,
 		index:   0,

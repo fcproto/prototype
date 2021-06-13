@@ -13,46 +13,13 @@ import (
 
 type AggregateValues map[string]aggregator.Type
 
-// internal struct used for storing the sensor and the required aggregators
-type collectSensor struct {
-	sensor      sensor.Sensor
-	aggregators map[string]*aggregator.Aggregator
-}
-
-func (cs *collectSensor) refresh() {
-	if len(cs.aggregators) == 0 {
-		return
-	}
-	values := cs.sensor.GetValues()
-	for k, agg := range cs.aggregators {
-		if val, ok := values[k]; ok {
-			agg.AddValue(val)
-		}
-	}
-}
-
-func (cs *collectSensor) getValues() sensor.Values {
-	values := cs.sensor.GetValues()
-	//replace current values with aggregated values
-	for k, agg := range cs.aggregators {
-		if _, ok := values[k]; !ok {
-			// skip if aggregator is not in values
-			continue
-		}
-		// add the current value to the aggregator and aggregate
-		agg.AddValue(values[k])
-		values[k] = agg.Aggregate()
-	}
-	return values
-}
-
 type Collector struct {
 	log        *log.ZapEventLogger
 	interval   time.Duration
 	tickerDone chan struct{}
 
 	sensorsMutex sync.Mutex
-	sensors      map[string]*collectSensor
+	sensors      map[string]*sensorCollector
 }
 
 func New() *Collector {
@@ -60,25 +27,15 @@ func New() *Collector {
 		log:        logger.New("collector"),
 		interval:   time.Second,
 		tickerDone: make(chan struct{}),
-		sensors:    make(map[string]*collectSensor),
+		sensors:    make(map[string]*sensorCollector),
 	}
 }
 
-func (c *Collector) RegisterSensor(name string, sensor sensor.Sensor, agg ...AggregateValues) {
+func (c *Collector) RegisterSensor(name string, sensor sensor.Sensor, aggValues ...AggregateValues) {
 	c.sensorsMutex.Lock()
 	defer c.sensorsMutex.Unlock()
-
-	aggregators := make(map[string]*aggregator.Aggregator)
-	for _, aggEl := range agg {
-		for v, t := range aggEl {
-			aggregators[v] = aggregator.NewAggregator(t, 5)
-		}
-	}
 	c.log.Debugf("adding new sensor: %s", name)
-	c.sensors[name] = &collectSensor{
-		sensor:      sensor,
-		aggregators: aggregators,
-	}
+	c.sensors[name] = newSensorCollector(sensor, aggValues)
 }
 
 func (c *Collector) Collect() *api.SensorData {
@@ -91,12 +48,12 @@ func (c *Collector) Collect() *api.SensorData {
 	return res
 }
 
-func (c *Collector) refreshSensors() {
+func (c *Collector) aggregateSensors() {
 	c.sensorsMutex.Lock()
 	defer c.sensorsMutex.Unlock()
-	//c.log.Debug("refreshing sensors...")
+	//c.log.Debug("aggregating sensors...")
 	for _, v := range c.sensors {
-		v.refresh()
+		v.aggregate()
 	}
 }
 
@@ -106,9 +63,9 @@ func (c *Collector) Start() {
 	for {
 		select {
 		case <-ticker.C:
-			c.refreshSensors()
+			c.aggregateSensors()
 		case <-c.tickerDone:
-			c.log.Debug("refreshing stopped")
+			c.log.Debug("aggregating stopped")
 			return
 		}
 	}
