@@ -8,7 +8,7 @@ import (
 
 func testAggType(t *testing.T, aggType Type, results []float64) {
 	req := require.New(t)
-	agg := NewAggregator(aggType, 3)
+	agg := New(aggType, 3)
 
 	// aggregate should return 0 if no values have been added
 	req.EqualValues(0, agg.Aggregate())
