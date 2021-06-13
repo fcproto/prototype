@@ -1,6 +1,8 @@
 package client
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -65,6 +67,30 @@ func (s *Service) SubmitSensorData(data *api.SensorData) {
 	}
 	s.buffer[s.bufferPos] = data
 	s.bufferPos = s.incPos(s.bufferPos)
+}
+
+func (s *Service) SyncUp() error {
+	return s.GetSensorData(func(data []*api.SensorData) error {
+		var buf bytes.Buffer
+		err := json.NewEncoder(&buf).Encode(data)
+		if err != nil {
+			return err
+		}
+
+		req, err := http.NewRequest("POST", s.endpoint, &buf)
+		if err != nil {
+			return err
+		}
+		res, err := s.client.Do(req)
+		if err != nil {
+			return err
+		}
+
+		if res.StatusCode != 200 {
+			return fmt.Errorf("invalid status code %d", res.StatusCode)
+		}
+		return nil
+	})
 }
 
 func (s *Service) GetSensorData(fn func([]*api.SensorData) error) error {

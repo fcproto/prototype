@@ -2,13 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/fcproto/prototype/pkg/api"
 	"github.com/fcproto/prototype/pkg/client"
 	"github.com/fcproto/prototype/pkg/client/aggregator"
 	"github.com/fcproto/prototype/pkg/client/collector"
@@ -21,7 +19,7 @@ import (
 func main() {
 	log := logger.New("main")
 	log.Info("starting edge service...")
-	service := client.NewService("http://127.0.0.1:3000/sensors", 120)
+	service := client.NewService("https://eng56b2lq2nnk.x.pipedream.net/", 120)
 
 	c := collector.New()
 	log.Info("registering sensors...")
@@ -50,10 +48,7 @@ func main() {
 
 	go func() {
 		for range time.Tick(10 * time.Second) {
-			err := service.GetSensorData(func(data []*api.SensorData) error {
-				fmt.Println(data)
-				return nil
-			})
+			err := service.SyncUp()
 			if err != nil {
 				log.Error(err)
 			}
