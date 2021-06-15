@@ -24,7 +24,7 @@ func main() {
 		log.Infof("getting speed value %d: %v", i, speedSensor.GetValues())
 	}
 
-	tempSensor := temperature.NewEnvironmentSensor()
+	tempSensor := temperature.New(25, 5)
 
 	for i := 0; i < 10; i++ {
 		log.Infof("getting temperature value %d: %v", i, tempSensor.GetValues())
