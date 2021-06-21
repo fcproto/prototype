@@ -2,6 +2,8 @@ package client
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -20,6 +22,7 @@ type Service struct {
 	endpoint string
 	log      *log.ZapEventLogger
 	client   *http.Client
+	ClientID string
 
 	bufferMutex sync.Mutex
 	bufferPos   int
@@ -42,10 +45,42 @@ func NewService(endpoint string, bufferSize int) (*Service, error) {
 		bufferPos: 0,
 		buffer:    make([]*api.SensorData, bufferSize),
 	}
+
+	if err := svc.loadOrGenerateId(); err != nil {
+		return nil, err
+	}
 	if err := svc.readFromFile(); err != nil {
 		return nil, err
 	}
+
 	return svc, nil
+}
+
+func createRandomId() []byte {
+	id := make([]byte, 32)
+	_, err := rand.Read(id)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
+func (s *Service) loadOrGenerateId() error {
+	clientIdFile := "client.id"
+	if clientIdFileEnv := os.Getenv("CLIENT_ID_FILE"); clientIdFileEnv != "" {
+		clientIdFile = clientIdFileEnv
+	}
+
+	rawClientId, err := os.ReadFile(clientIdFile)
+	if err != nil {
+		s.log.Warn(err)
+		rawClientId = createRandomId()
+		if err := os.WriteFile(clientIdFile, rawClientId, 0644); err != nil {
+			return err
+		}
+	}
+	s.ClientID = hex.EncodeToString(rawClientId)
+	return nil
 }
 
 func (s *Service) incPos(pos int) int {
@@ -80,8 +115,12 @@ func (s *Service) SubmitSensorData(data *api.SensorData) error {
 
 func (s *Service) syncUp() error {
 	return s.GetSensorData(func(data []*api.SensorData) error {
+		syncUpData := &api.SyncUpData{
+			ClientID: s.ClientID,
+			Data:     data,
+		}
 		var buf bytes.Buffer
-		err := json.NewEncoder(&buf).Encode(data)
+		err := json.NewEncoder(&buf).Encode(syncUpData)
 		if err != nil {
 			return err
 		}
@@ -107,6 +146,11 @@ func (s *Service) syncDown() error {
 	if err != nil {
 		return err
 	}
+
+	q := req.URL.Query()
+	q.Add("client-id", s.ClientID)
+	req.URL.RawQuery = q.Encode()
+
 	res, err := s.client.Do(req)
 	if err != nil {
 		return err
@@ -197,5 +241,5 @@ func (s *Service) readFromFile() error {
 func (s *Service) String() string {
 	s.bufferMutex.Lock()
 	defer s.bufferMutex.Unlock()
-	return fmt.Sprintf("{pos=%d, buffer=%v}", s.bufferPos, s.buffer)
+	return fmt.Sprintf("{id=%s, pos=%d, buffer=%v}", s.ClientID, s.bufferPos, s.buffer)
 }

@@ -25,3 +25,8 @@ func (r *SensorData) String() string {
 	_ = json.NewEncoder(&builder).Encode(&r)
 	return builder.String()
 }
+
+type SyncUpData struct {
+	ClientID string        `json:"clientId"`
+	Data     []*SensorData `json:"data"`
+}
