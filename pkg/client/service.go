@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -25,8 +26,8 @@ type Service struct {
 	buffer      []*api.SensorData
 }
 
-func NewService(endpoint string, bufferSize int) *Service {
-	return &Service{
+func NewService(endpoint string, bufferSize int) (*Service, error) {
+	svc := &Service{
 		endpoint: endpoint,
 		log:      logger.New("service"),
 		client: &http.Client{
@@ -41,6 +42,10 @@ func NewService(endpoint string, bufferSize int) *Service {
 		bufferPos: 0,
 		buffer:    make([]*api.SensorData, bufferSize),
 	}
+	if err := svc.readFromFile(); err != nil {
+		return nil, err
+	}
+	return svc, nil
 }
 
 func (s *Service) incPos(pos int) int {
@@ -59,7 +64,7 @@ func (s *Service) decPos(pos int) int {
 	return pos
 }
 
-func (s *Service) SubmitSensorData(data *api.SensorData) {
+func (s *Service) SubmitSensorData(data *api.SensorData) error {
 	s.bufferMutex.Lock()
 	defer s.bufferMutex.Unlock()
 	if s.buffer[s.bufferPos] != nil {
@@ -67,6 +72,10 @@ func (s *Service) SubmitSensorData(data *api.SensorData) {
 	}
 	s.buffer[s.bufferPos] = data
 	s.bufferPos = s.incPos(s.bufferPos)
+	if err := s.writeToFile(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Service) SyncUp() error {
@@ -115,6 +124,47 @@ func (s *Service) GetSensorData(fn func([]*api.SensorData) error) error {
 		s.buffer[i] = nil
 	}
 	s.bufferPos = 0
+	return nil
+}
+
+func (s *Service) writeToFile() error {
+	data, err := json.Marshal(s.buffer)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile("service-data.json", data, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) readFromFile() error {
+	data, err := os.ReadFile("service-data.json")
+	if err != nil {
+		s.log.Warn(err)
+		return nil
+	}
+
+	var buffer []*api.SensorData
+	if err := json.Unmarshal(data, &buffer); err != nil {
+		s.log.Warn(err)
+		return nil
+	}
+
+	if len(buffer) != len(s.buffer) {
+		s.log.Warn("ignoring invalid backup file")
+		return nil
+	}
+
+	for _, entry := range buffer {
+		if entry == nil {
+			break
+		}
+		s.buffer[s.bufferPos] = entry
+		s.bufferPos = s.incPos(s.bufferPos)
+	}
+
 	return nil
 }
 

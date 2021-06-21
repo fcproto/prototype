@@ -13,18 +13,19 @@ import (
 	"github.com/fcproto/prototype/pkg/logger"
 	"github.com/fcproto/prototype/pkg/sensor/compass"
 	"github.com/fcproto/prototype/pkg/sensor/gps"
-	"github.com/fcproto/prototype/pkg/sensor/speed"
 	"github.com/fcproto/prototype/pkg/sensor/temperature"
 )
 
 func main() {
 	log := logger.New("main")
 	log.Info("starting edge service...")
-	service := client.NewService("https://envwzzmqa85j.x.pipedream.net/", 120)
+	service, err := client.NewService("https://envwzzmqa85j.x.pipedream.net/", 120)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	c := collector.New()
 	log.Info("registering sensors...")
-	c.RegisterSensor("speed", speed.NewSensor())
 	c.RegisterSensor("gps", gps.NewSensor())
 	c.RegisterSensor("compass", compass.NewSensor())
 	c.RegisterSensor("temperature/env", temperature.New(25, 2), collector.AggregateValues{
@@ -43,15 +44,17 @@ func main() {
 
 	go func() {
 		for range time.Tick(time.Second) {
-			//log.Debug("collecting data...")
-			service.SubmitSensorData(c.Collect())
+			log.Debug("collecting and saving data...")
+			if err := service.SubmitSensorData(c.Collect()); err != nil {
+				log.Error(err)
+			}
 		}
 	}()
 
 	go func() {
 		for range time.Tick(10 * time.Second) {
-			err := service.SyncUp()
-			if err != nil {
+			log.Debug("syncing data...")
+			if err := service.SyncUp(); err != nil {
 				log.Error(err)
 			}
 		}
