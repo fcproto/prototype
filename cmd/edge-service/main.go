@@ -53,8 +53,8 @@ func main() {
 
 	go func() {
 		for range time.Tick(10 * time.Second) {
-			log.Debug("syncing data...")
-			if err := service.SyncUp(); err != nil {
+			log.Debug("syncing...")
+			if err := service.Sync(); err != nil {
 				log.Error(err)
 			}
 		}
