@@ -78,7 +78,7 @@ func (s *Service) SubmitSensorData(data *api.SensorData) error {
 	return nil
 }
 
-func (s *Service) SyncUp() error {
+func (s *Service) syncUp() error {
 	return s.GetSensorData(func(data []*api.SensorData) error {
 		var buf bytes.Buffer
 		err := json.NewEncoder(&buf).Encode(data)
@@ -100,6 +100,32 @@ func (s *Service) SyncUp() error {
 		}
 		return nil
 	})
+}
+
+func (s *Service) syncDown() error {
+	req, err := http.NewRequest("GET", s.endpoint, nil)
+	if err != nil {
+		return err
+	}
+	res, err := s.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != 200 {
+		return fmt.Errorf("invalid status code %d", res.StatusCode)
+	}
+	return nil
+}
+
+func (s *Service) Sync() error {
+	if err := s.syncUp(); err != nil {
+		return err
+	}
+	if err := s.syncDown(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Service) GetSensorData(fn func([]*api.SensorData) error) error {
