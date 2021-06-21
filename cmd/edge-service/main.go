@@ -19,7 +19,7 @@ import (
 func main() {
 	log := logger.New("main")
 	log.Info("starting edge service...")
-	service, err := client.NewService("https://envwzzmqa85j.x.pipedream.net/", 120)
+	service, err := client.NewService("https://enurh89boy1zk.x.pipedream.net/", 120)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,20 +43,22 @@ func main() {
 	defer stop()
 
 	go func() {
-		for range time.Tick(time.Second) {
+		for {
 			log.Debug("collecting and saving data...")
 			if err := service.SubmitSensorData(c.Collect()); err != nil {
 				log.Error(err)
 			}
+			<-time.After(time.Second)
 		}
 	}()
 
 	go func() {
-		for range time.Tick(10 * time.Second) {
+		for {
 			log.Debug("syncing...")
 			if err := service.Sync(); err != nil {
 				log.Error(err)
 			}
+			<-time.After(10 * time.Second)
 		}
 	}()
 
