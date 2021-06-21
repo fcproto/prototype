@@ -16,7 +16,7 @@ import (
 	"github.com/ipfs/go-log/v2"
 )
 
-const Timeout = time.Second * 10
+const Timeout = time.Second * 3
 
 type Service struct {
 	endpoint string
