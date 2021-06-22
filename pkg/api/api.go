@@ -9,6 +9,7 @@ import (
 )
 
 type SensorData struct {
+	ClientID  string                   `json:"clientId"`
 	Timestamp time.Time                `json:"timestamp"`
 	Sensors   map[string]sensor.Values `json:"sensors"`
 }
@@ -24,9 +25,4 @@ func (r *SensorData) String() string {
 	var builder strings.Builder
 	_ = json.NewEncoder(&builder).Encode(&r)
 	return builder.String()
-}
-
-type SyncUpData struct {
-	ClientID string        `json:"clientId"`
-	Data     []*SensorData `json:"data"`
 }

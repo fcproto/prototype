@@ -19,7 +19,7 @@ import (
 func main() {
 	log := logger.New("main")
 	log.Info("starting edge service...")
-	service, err := client.NewService("https://enurh89boy1zk.x.pipedream.net/", 120)
+	service, err := client.NewService("http://localhost:8080/", 120)
 	if err != nil {
 		log.Fatal(err)
 	}
