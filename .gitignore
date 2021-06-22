@@ -1,3 +1,4 @@
 .idea/
-sensor-test
-edge-service
+bin/
+tmp/
+fcproto-credentials.json
