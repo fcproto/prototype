@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/fcproto/prototype/pkg/api"
@@ -88,11 +87,10 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 }
 
 func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	// clientID := params.ByName("client-id")
+	clientID := params.ByName("client-id")
 
 	iter := firestoreClient.Collection("sensor-data").
-		// Where("ClientID", "!=", clientID).
-		Where("Timestamp", "<=", time.Now()).
+		OrderBy("Timestamp", firestore.Desc).
 		Documents(r.Context())
 
 	data := make([]*api.SensorData, 0)
@@ -114,8 +112,19 @@ func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Param
 		}
 		data = append(data, &d)
 	}
+	carIds := map[string]bool{clientID: true}
+	nearCars := []*api.SensorData{}
+	for _, el := range data {
+		if !carIds[el.ClientID] {
+			carIds[el.ClientID] = true
+			nearCars = append(nearCars, el)
+		}
+		if len(nearCars) > 2 {
+			break
+		}
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(data)
+	json.NewEncoder(w).Encode(nearCars)
 }
