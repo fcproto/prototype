@@ -105,6 +105,7 @@ func (s *Service) SubmitSensorData(data *api.SensorData) error {
 	if s.buffer[s.bufferPos] != nil {
 		s.log.Warn("buffer is full, overwriting old data")
 	}
+	data.ClientID = s.ClientID
 	s.buffer[s.bufferPos] = data
 	s.bufferPos = s.incPos(s.bufferPos)
 	if err := s.writeToFile(); err != nil {
@@ -115,12 +116,8 @@ func (s *Service) SubmitSensorData(data *api.SensorData) error {
 
 func (s *Service) syncUp() error {
 	return s.GetSensorData(func(data []*api.SensorData) error {
-		syncUpData := &api.SyncUpData{
-			ClientID: s.ClientID,
-			Data:     data,
-		}
 		var buf bytes.Buffer
-		err := json.NewEncoder(&buf).Encode(syncUpData)
+		err := json.NewEncoder(&buf).Encode(data)
 		if err != nil {
 			return err
 		}

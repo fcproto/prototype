@@ -2,3 +2,5 @@
 bin/
 tmp/
 fcproto-credentials.json
+client.id
+service-data.json

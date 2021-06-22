@@ -2,15 +2,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"context"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/fcproto/prototype/pkg/api"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mitchellh/mapstructure"
 	"google.golang.org/api/iterator"
 )
 
@@ -38,13 +39,14 @@ func main() {
 	router := httprouter.New()
 	router.GET("/", Index)
 	router.POST("/", StoreData)
+	router.GET("/near/:client-id", GetNearCars)
 
 	// Start HTTP server.
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
 func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	iter := firestoreClient.Collection("sensor-data").Documents(context.Background())
+	iter := firestoreClient.Collection("sensor-data").Documents(r.Context())
 	type keyvalue map[string]interface{}
 	data := make([]keyvalue, 0)
 	for {
@@ -80,7 +82,40 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	} else {
 		// Write content-type, statuscode, payload
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(201)
-		json.NewEncoder(w).Encode(data)
+		w.WriteHeader(200)
+		// json.NewEncoder(w).Encode(data)
 	}
+}
+
+func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	// clientID := params.ByName("client-id")
+
+	iter := firestoreClient.Collection("sensor-data").
+		// Where("ClientID", "!=", clientID).
+		Where("Timestamp", "<=", time.Now()).
+		Documents(r.Context())
+
+	data := make([]*api.SensorData, 0)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Printf("An error has occurred: %s", err)
+			http.Error(w, err.Error(), 500)
+		}
+
+		d := api.SensorData{}
+		err = mapstructure.Decode(doc.Data(), &d)
+		if err != nil {
+			log.Printf("An error has occurred: %s", err)
+			http.Error(w, err.Error(), 500)
+		}
+		data = append(data, &d)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	json.NewEncoder(w).Encode(data)
 }
