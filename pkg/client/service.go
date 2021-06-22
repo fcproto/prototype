@@ -2,9 +2,12 @@ package client
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -13,20 +16,21 @@ import (
 	"github.com/ipfs/go-log/v2"
 )
 
-const Timeout = time.Second * 10
+const Timeout = time.Second * 3
 
 type Service struct {
 	endpoint string
 	log      *log.ZapEventLogger
 	client   *http.Client
+	ClientID string
 
 	bufferMutex sync.Mutex
 	bufferPos   int
 	buffer      []*api.SensorData
 }
 
-func NewService(endpoint string, bufferSize int) *Service {
-	return &Service{
+func NewService(endpoint string, bufferSize int) (*Service, error) {
+	svc := &Service{
 		endpoint: endpoint,
 		log:      logger.New("service"),
 		client: &http.Client{
@@ -41,6 +45,42 @@ func NewService(endpoint string, bufferSize int) *Service {
 		bufferPos: 0,
 		buffer:    make([]*api.SensorData, bufferSize),
 	}
+
+	if err := svc.loadOrGenerateId(); err != nil {
+		return nil, err
+	}
+	if err := svc.readFromFile(); err != nil {
+		return nil, err
+	}
+
+	return svc, nil
+}
+
+func createRandomId() []byte {
+	id := make([]byte, 32)
+	_, err := rand.Read(id)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
+func (s *Service) loadOrGenerateId() error {
+	clientIdFile := "client.id"
+	if clientIdFileEnv := os.Getenv("CLIENT_ID_FILE"); clientIdFileEnv != "" {
+		clientIdFile = clientIdFileEnv
+	}
+
+	rawClientId, err := os.ReadFile(clientIdFile)
+	if err != nil {
+		s.log.Warn(err)
+		rawClientId = createRandomId()
+		if err := os.WriteFile(clientIdFile, rawClientId, 0644); err != nil {
+			return err
+		}
+	}
+	s.ClientID = hex.EncodeToString(rawClientId)
+	return nil
 }
 
 func (s *Service) incPos(pos int) int {
@@ -59,7 +99,7 @@ func (s *Service) decPos(pos int) int {
 	return pos
 }
 
-func (s *Service) SubmitSensorData(data *api.SensorData) {
+func (s *Service) SubmitSensorData(data *api.SensorData) error {
 	s.bufferMutex.Lock()
 	defer s.bufferMutex.Unlock()
 	if s.buffer[s.bufferPos] != nil {
@@ -67,12 +107,20 @@ func (s *Service) SubmitSensorData(data *api.SensorData) {
 	}
 	s.buffer[s.bufferPos] = data
 	s.bufferPos = s.incPos(s.bufferPos)
+	if err := s.writeToFile(); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (s *Service) SyncUp() error {
+func (s *Service) syncUp() error {
 	return s.GetSensorData(func(data []*api.SensorData) error {
+		syncUpData := &api.SyncUpData{
+			ClientID: s.ClientID,
+			Data:     data,
+		}
 		var buf bytes.Buffer
-		err := json.NewEncoder(&buf).Encode(data)
+		err := json.NewEncoder(&buf).Encode(syncUpData)
 		if err != nil {
 			return err
 		}
@@ -91,6 +139,37 @@ func (s *Service) SyncUp() error {
 		}
 		return nil
 	})
+}
+
+func (s *Service) syncDown() error {
+	req, err := http.NewRequest("GET", s.endpoint, nil)
+	if err != nil {
+		return err
+	}
+
+	q := req.URL.Query()
+	q.Add("client-id", s.ClientID)
+	req.URL.RawQuery = q.Encode()
+
+	res, err := s.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != 200 {
+		return fmt.Errorf("invalid status code %d", res.StatusCode)
+	}
+	return nil
+}
+
+func (s *Service) Sync() error {
+	if err := s.syncUp(); err != nil {
+		return err
+	}
+	if err := s.syncDown(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Service) GetSensorData(fn func([]*api.SensorData) error) error {
@@ -118,8 +197,49 @@ func (s *Service) GetSensorData(fn func([]*api.SensorData) error) error {
 	return nil
 }
 
+func (s *Service) writeToFile() error {
+	data, err := json.Marshal(s.buffer)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile("service-data.json", data, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) readFromFile() error {
+	data, err := os.ReadFile("service-data.json")
+	if err != nil {
+		s.log.Warn(err)
+		return nil
+	}
+
+	var buffer []*api.SensorData
+	if err := json.Unmarshal(data, &buffer); err != nil {
+		s.log.Warn(err)
+		return nil
+	}
+
+	if len(buffer) != len(s.buffer) {
+		s.log.Warn("ignoring invalid backup file")
+		return nil
+	}
+
+	for _, entry := range buffer {
+		if entry == nil {
+			break
+		}
+		s.buffer[s.bufferPos] = entry
+		s.bufferPos = s.incPos(s.bufferPos)
+	}
+
+	return nil
+}
+
 func (s *Service) String() string {
 	s.bufferMutex.Lock()
 	defer s.bufferMutex.Unlock()
-	return fmt.Sprintf("{pos=%d, buffer=%v}", s.bufferPos, s.buffer)
+	return fmt.Sprintf("{id=%s, pos=%d, buffer=%v}", s.ClientID, s.bufferPos, s.buffer)
 }
