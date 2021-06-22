@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"cloud.google.com/go/firestore"
+	"github.com/fcproto/prototype/pkg/api"
 	"github.com/julienschmidt/httprouter"
 	"google.golang.org/api/iterator"
 )
@@ -36,6 +37,7 @@ func main() {
 
 	router := httprouter.New()
 	router.GET("/", Index)
+	router.POST("/", StoreData)
 
 	// Start HTTP server.
 	log.Fatal(http.ListenAndServe(":8080", router))
@@ -56,4 +58,29 @@ func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		data = append(data, doc.Data())
 	}
 	json.NewEncoder(w).Encode(data)
+}
+
+func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	data := make([]*api.SensorData, 0)
+	batch := firestoreClient.Batch()
+
+	// Populate the user data
+	json.NewDecoder(r.Body).Decode(&data)
+
+	for _, el := range data {
+		ref := firestoreClient.Collection("sensor-data").NewDoc()
+		batch.Set(ref, el)
+	}
+
+	_, err := batch.Commit(r.Context())
+
+	if err != nil {
+		log.Printf("An error has occurred: %s", err)
+		http.Error(w, err.Error(), 500)
+	} else {
+		// Write content-type, statuscode, payload
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(201)
+		json.NewEncoder(w).Encode(data)
+	}
 }
