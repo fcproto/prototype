@@ -1,3 +1,4 @@
 .idea/
 bin/
-fcproto-c8e94c98d7a2.json
+tmp/
+fcproto-credentials.json

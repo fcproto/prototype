@@ -3,16 +3,17 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"context"
 
 	"cloud.google.com/go/firestore"
+	"github.com/julienschmidt/httprouter"
 	"google.golang.org/api/iterator"
 )
+
+var firestoreClient *firestore.Client
 
 func createClient() *firestore.Client {
 	// Sets your Google Cloud Platform project ID.
@@ -30,27 +31,18 @@ func createClient() *firestore.Client {
 
 func main() {
 	log.Print("starting server...")
-	http.HandleFunc("/", handler)
 
-	// Determine port for HTTP service.
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-		log.Printf("defaulting to port %s", port)
-	}
+	firestoreClient = createClient()
+
+	router := httprouter.New()
+	router.GET("/", Index)
 
 	// Start HTTP server.
-	log.Printf("listening on port %s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatal(err)
-	}
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	client := createClient()
-
-	ctx := context.Background()
-	iter := client.Collection("sensor-data").Documents(ctx)
+func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	iter := firestoreClient.Collection("sensor-data").Documents(context.Background())
 	type keyvalue map[string]interface{}
 	data := make([]keyvalue, 0)
 	for {
@@ -61,9 +53,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatalf("Failed to iterate: %v", err)
 		}
-		fmt.Println(doc.Data())
 		data = append(data, doc.Data())
 	}
-	jsonData, _ := json.Marshal(data)
-	fmt.Fprint(w, string(jsonData))
+	json.NewEncoder(w).Encode(data)
 }
