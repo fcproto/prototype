@@ -58,7 +58,7 @@ func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		}
 		data = append(data, doc.Data())
 	}
-	json.NewEncoder(w).Encode(data)
+	_ = json.NewEncoder(w).Encode(data)
 }
 
 func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -66,14 +66,20 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	batch := firestoreClient.Batch()
 
 	// Populate the user data
-	json.NewDecoder(r.Body).Decode(&data)
+	err := json.NewDecoder(r.Body).Decode(&data)
+
+	if err != nil {
+		log.Printf("An error has occurred: %s", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
 
 	for _, el := range data {
 		ref := firestoreClient.Collection("sensor-data").NewDoc()
 		batch.Set(ref, el)
 	}
 
-	_, err := batch.Commit(r.Context())
+	_, err = batch.Commit(r.Context())
 
 	if err != nil {
 		log.Printf("An error has occurred: %s", err)
@@ -126,5 +132,10 @@ func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Param
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(nearCars)
+	err := json.NewEncoder(w).Encode(nearCars)
+	if err != nil {
+		log.Printf("An error has occurred: %s", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
 }
