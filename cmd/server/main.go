@@ -108,6 +108,7 @@ func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Param
 		if err != nil {
 			log.Printf("An error has occurred: %s", err)
 			http.Error(w, err.Error(), 500)
+			return
 		}
 
 		d := api.SensorData{}
@@ -115,6 +116,7 @@ func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Param
 		if err != nil {
 			log.Printf("An error has occurred: %s", err)
 			http.Error(w, err.Error(), 500)
+			return
 		}
 		data = append(data, &d)
 	}
