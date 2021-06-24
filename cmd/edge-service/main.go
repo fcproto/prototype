@@ -19,7 +19,11 @@ import (
 func main() {
 	log := logger.New("main")
 	log.Info("starting edge service...")
-	service, err := client.NewService("http://localhost:8080/", 120)
+	endpoint := os.Getenv("CLOUD_ENDPOINT")
+	if len(endpoint) == 0 {
+		endpoint = "http://localhost:8080"
+	}
+	service, err := client.NewService(endpoint, 120)
 	if err != nil {
 		log.Fatal(err)
 	}
