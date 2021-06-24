@@ -4,11 +4,11 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"cloud.google.com/go/firestore"
 	"github.com/fcproto/prototype/pkg/api"
+	"github.com/fcproto/prototype/pkg/logger"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mitchellh/mapstructure"
 	"google.golang.org/api/iterator"
@@ -17,13 +17,14 @@ import (
 var firestoreClient *firestore.Client
 
 func createClient() *firestore.Client {
+	log := logger.New("server")
 	// Sets your Google Cloud Platform project ID.
 	projectID := "fcproto"
 	ctx := context.Background()
 
 	client, err := firestore.NewClient(ctx, projectID)
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		log.Errorf("Failed to create client: %v", err)
 	}
 	// Close client when done with
 	// defer client.Close()
@@ -31,7 +32,8 @@ func createClient() *firestore.Client {
 }
 
 func main() {
-	log.Print("starting server...")
+	log := logger.New("server")
+	log.Info("starting server...")
 
 	firestoreClient = createClient()
 
@@ -45,6 +47,7 @@ func main() {
 }
 
 func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	log := logger.New("server")
 	iter := firestoreClient.Collection("sensor-data").Documents(r.Context())
 	type keyvalue map[string]interface{}
 	data := make([]keyvalue, 0)
@@ -58,10 +61,17 @@ func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		}
 		data = append(data, doc.Data())
 	}
-	_ = json.NewEncoder(w).Encode(data)
+	err := json.NewEncoder(w).Encode(data)
+	if err != nil {
+		log.Errorf("An error has occurred: %s", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	log.Infof("Sent %d documents", len(data))
 }
 
 func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	log := logger.New("server")
 	data := make([]*api.SensorData, 0)
 	batch := firestoreClient.Batch()
 
@@ -69,7 +79,7 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	err := json.NewDecoder(r.Body).Decode(&data)
 
 	if err != nil {
-		log.Printf("An error has occurred: %s", err)
+		log.Errorf("An error has occurred: %s", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
@@ -82,10 +92,11 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	_, err = batch.Commit(r.Context())
 
 	if err != nil {
-		log.Printf("An error has occurred: %s", err)
+		log.Errorf("An error has occurred: %s", err)
 		http.Error(w, err.Error(), 500)
 	} else {
 		// Write content-type, statuscode, payload
+		log.Infof("Stored %d documents", len(data))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		// json.NewEncoder(w).Encode(data)
@@ -93,6 +104,7 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 }
 
 func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	log := logger.New("server")
 	clientID := params.ByName("client-id")
 
 	iter := firestoreClient.Collection("sensor-data").
@@ -106,7 +118,7 @@ func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Param
 			break
 		}
 		if err != nil {
-			log.Printf("An error has occurred: %s", err)
+			log.Errorf("An error has occurred: %s", err)
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -114,7 +126,7 @@ func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Param
 		d := api.SensorData{}
 		err = mapstructure.Decode(doc.Data(), &d)
 		if err != nil {
-			log.Printf("An error has occurred: %s", err)
+			log.Errorf("An error has occurred: %s", err)
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -136,8 +148,9 @@ func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Param
 	w.WriteHeader(200)
 	err := json.NewEncoder(w).Encode(nearCars)
 	if err != nil {
-		log.Printf("An error has occurred: %s", err)
+		log.Errorf("An error has occurred: %s", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	log.Infof("Sent %d documents", len(data))
 }
