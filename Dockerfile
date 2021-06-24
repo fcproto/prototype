@@ -13,10 +13,10 @@ COPY go.* ./
 RUN go mod download
 
 # Copy local code to the container image.
-COPY ./cmd/server ./
+COPY ./ ./
 
 # Build the binary.
-RUN go build -o server
+RUN go build -o server ./cmd/server
 
 # Use the official Debian slim image for a lean production container.
 # https://hub.docker.com/_/debian
