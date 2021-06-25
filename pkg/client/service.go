@@ -12,15 +12,14 @@ import (
 	"time"
 
 	"github.com/fcproto/prototype/pkg/api"
-	"github.com/fcproto/prototype/pkg/logger"
-	"github.com/ipfs/go-log/v2"
+	"github.com/sirupsen/logrus"
 )
 
 const Timeout = time.Second * 3
 
 type Service struct {
 	endpoint string
-	log      *log.ZapEventLogger
+	log      *logrus.Logger
 	client   *http.Client
 	ClientID string
 
@@ -29,10 +28,10 @@ type Service struct {
 	buffer      []*api.SensorData
 }
 
-func NewService(endpoint string, bufferSize int) (*Service, error) {
+func NewService(log *logrus.Logger, endpoint string, bufferSize int) (*Service, error) {
 	svc := &Service{
 		endpoint: endpoint,
-		log:      logger.New("service"),
+		log:      log,
 		client: &http.Client{
 			Transport: &http.Transport{
 				TLSHandshakeTimeout:   Timeout,

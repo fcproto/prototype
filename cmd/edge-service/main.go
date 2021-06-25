@@ -17,18 +17,18 @@ import (
 )
 
 func main() {
-	log := logger.New("main")
+	log := logger.New()
 	log.Info("starting edge service...")
 	endpoint := os.Getenv("CLOUD_ENDPOINT")
 	if len(endpoint) == 0 {
 		endpoint = "http://localhost:8080"
 	}
-	service, err := client.NewService(endpoint, 120)
+	service, err := client.NewService(log, endpoint, 120)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	c := collector.New()
+	c := collector.New(log)
 	log.Info("registering sensors...")
 	c.RegisterSensor("gps", gps.NewSensor())
 	c.RegisterSensor("compass", compass.NewSensor())

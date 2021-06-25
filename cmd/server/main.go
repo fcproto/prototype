@@ -1,4 +1,3 @@
-// Sample run-helloworld is a minimal Cloud Run service.
 package main
 
 import (
@@ -11,20 +10,22 @@ import (
 	"github.com/fcproto/prototype/pkg/logger"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mitchellh/mapstructure"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
 )
 
 var firestoreClient *firestore.Client
+var log *logrus.Logger
 
 func createClient() *firestore.Client {
-	log := logger.New("server")
 	// Sets your Google Cloud Platform project ID.
 	projectID := "fcproto"
 	ctx := context.Background()
 
 	client, err := firestore.NewClient(ctx, projectID)
 	if err != nil {
-		log.Errorf("Failed to create client: %v", err)
+		// panic if client cannot be created
+		panic(err)
 	}
 	// Close client when done with
 	// defer client.Close()
@@ -32,7 +33,7 @@ func createClient() *firestore.Client {
 }
 
 func main() {
-	log := logger.New("server")
+	log = logger.New()
 	log.Info("starting server...")
 
 	firestoreClient = createClient()
@@ -47,10 +48,8 @@ func main() {
 }
 
 func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	log := logger.New("server")
 	iter := firestoreClient.Collection("sensor-data").Documents(r.Context())
-	type keyvalue map[string]interface{}
-	data := make([]keyvalue, 0)
+	data := make([]map[string]interface{}, 0)
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
@@ -71,7 +70,6 @@ func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }
 
 func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	log := logger.New("server")
 	data := make([]*api.SensorData, 0)
 	batch := firestoreClient.Batch()
 
@@ -104,7 +102,6 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 }
 
 func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	log := logger.New("server")
 	clientID := params.ByName("client-id")
 
 	iter := firestoreClient.Collection("sensor-data").
@@ -133,7 +130,7 @@ func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Param
 		data = append(data, &d)
 	}
 	carIds := map[string]bool{clientID: true}
-	nearCars := []*api.SensorData{}
+	nearCars := make([]*api.SensorData, 0)
 	for _, el := range data {
 		if !carIds[el.ClientID] {
 			carIds[el.ClientID] = true

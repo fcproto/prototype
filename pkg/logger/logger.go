@@ -1,12 +1,14 @@
 package logger
 
-import "github.com/ipfs/go-log/v2"
+import (
+	"github.com/sirupsen/logrus"
+)
 
-func New(system string) *log.ZapEventLogger {
-	logger := log.Logger(system)
-	if err := log.SetLogLevel(system, "debug"); err != nil {
-		// this should never happen
-		panic(err)
-	}
-	return logger
+func New() *logrus.Logger {
+	log := logrus.New()
+	log.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+	log.SetLevel(logrus.DebugLevel)
+	return log
 }

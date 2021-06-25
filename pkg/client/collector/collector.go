@@ -6,15 +6,14 @@ import (
 
 	"github.com/fcproto/prototype/pkg/api"
 	"github.com/fcproto/prototype/pkg/client/aggregator"
-	"github.com/fcproto/prototype/pkg/logger"
 	"github.com/fcproto/prototype/pkg/sensor"
-	"github.com/ipfs/go-log/v2"
+	"github.com/sirupsen/logrus"
 )
 
 type AggregateValues map[string]aggregator.Type
 
 type Collector struct {
-	log        *log.ZapEventLogger
+	log        *logrus.Logger
 	interval   time.Duration
 	tickerDone chan struct{}
 
@@ -23,9 +22,9 @@ type Collector struct {
 	aggregatorSize int
 }
 
-func New() *Collector {
+func New(log *logrus.Logger) *Collector {
 	return &Collector{
-		log:            logger.New("collector"),
+		log:            log,
 		interval:       time.Millisecond * 50,
 		tickerDone:     make(chan struct{}),
 		sensors:        make(map[string]*sensorCollector),
