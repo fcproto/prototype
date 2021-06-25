@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"cloud.google.com/go/firestore"
 	"github.com/fcproto/prototype/pkg/api"
@@ -25,7 +28,7 @@ func createClient() *firestore.Client {
 	client, err := firestore.NewClient(ctx, projectID)
 	if err != nil {
 		// panic if client cannot be created
-		panic(err)
+		log.Fatal(err)
 	}
 	// Close client when done with
 	// defer client.Close()
@@ -37,14 +40,34 @@ func main() {
 	log.Info("starting server...")
 
 	firestoreClient = createClient()
+	defer firestoreClient.Close()
 
 	router := httprouter.New()
 	router.GET("/", Index)
 	router.POST("/", StoreData)
 	router.GET("/near/:client-id", GetNearCars)
 
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: router,
+	}
+
 	// Start HTTP server.
-	log.Fatal(http.ListenAndServe(":8080", router))
+	go func() {
+		log.Printf("listening on %s", srv.Addr)
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			log.Error(err)
+		}
+	}()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	<-ctx.Done()
+	log.Println("stopping server...")
+
+	if err := srv.Close(); err != nil {
+		log.Error(err)
+	}
 }
 
 func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
