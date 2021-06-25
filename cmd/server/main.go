@@ -3,14 +3,18 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/fcproto/prototype/pkg/api"
 	"github.com/fcproto/prototype/pkg/logger"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
@@ -19,6 +23,37 @@ import (
 
 var firestoreClient *firestore.Client
 var log *logrus.Logger
+
+type clientInfo struct {
+	ClientID   string
+	LastUpdate time.Time
+	UpdateSize int
+}
+
+var clientStatusLock sync.Mutex
+var clientStatus = make([]*clientInfo, 0)
+
+func updateClient(id string, updateSize int) {
+	clientStatusLock.Lock()
+	defer clientStatusLock.Unlock()
+
+	var info *clientInfo
+	for _, cInfo := range clientStatus {
+		if cInfo.ClientID == id {
+			info = cInfo
+			break
+		}
+	}
+
+	if info == nil {
+		info = &clientInfo{
+			ClientID: id,
+		}
+		clientStatus = append(clientStatus, info)
+	}
+	info.LastUpdate = time.Now()
+	info.UpdateSize = updateSize
+}
 
 func createClient() *firestore.Client {
 	// Sets your Google Cloud Platform project ID.
@@ -44,6 +79,7 @@ func main() {
 
 	router := httprouter.New()
 	router.GET("/", Index)
+	router.GET("/status", Status)
 	router.POST("/", StoreData)
 	router.GET("/near/:client-id", GetNearCars)
 
@@ -66,6 +102,26 @@ func main() {
 	log.Println("stopping server...")
 
 	if err := srv.Close(); err != nil {
+		log.Error(err)
+	}
+}
+
+func Status(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	status := table.NewWriter()
+	status.SetStyle(table.StyleLight)
+	status.AppendHeader(table.Row{"#", "Client ID", "Last Update", "Update Size"})
+	status.AppendSeparator()
+
+	clientStatusLock.Lock()
+	defer clientStatusLock.Unlock()
+	for i, info := range clientStatus {
+		status.AppendRow(table.Row{1 + i, info.ClientID[:8], info.LastUpdate.Format("15:04:05"), info.UpdateSize})
+		status.AppendSeparator()
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	_, err := fmt.Fprintf(w, "\n\nCurrent Time: %s\n\n%s\n", time.Now().Format("15:04:05"), status.Render())
+	if err != nil {
 		log.Error(err)
 	}
 }
@@ -105,8 +161,10 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 		return
 	}
 
+	clientId := ""
 	for _, el := range data {
 		ref := firestoreClient.Collection("sensor-data").NewDoc()
+		clientId = el.ClientID
 		batch.Set(ref, el)
 	}
 
@@ -117,6 +175,7 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 		http.Error(w, err.Error(), 500)
 	} else {
 		// Write content-type, statuscode, payload
+		updateClient(clientId, len(data))
 		log.Infof("Stored %d documents", len(data))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
