@@ -16,7 +16,6 @@ import (
 	"github.com/fcproto/prototype/pkg/logger"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/julienschmidt/httprouter"
-	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
 )
@@ -112,15 +111,17 @@ func Status(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	status.AppendHeader(table.Row{"#", "Client ID", "Last Update", "Update Size"})
 	status.AppendSeparator()
 
+	now := time.Now()
 	clientStatusLock.Lock()
 	defer clientStatusLock.Unlock()
 	for i, info := range clientStatus {
-		status.AppendRow(table.Row{1 + i, info.ClientID[:8], info.LastUpdate.Format("15:04:05"), info.UpdateSize})
+		lastUpdate := fmt.Sprintf("%.0fs ago", now.Sub(info.LastUpdate).Seconds())
+		status.AppendRow(table.Row{1 + i, info.ClientID[:8], lastUpdate, info.UpdateSize})
 		status.AppendSeparator()
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
-	_, err := fmt.Fprintf(w, "\n\nCurrent Time: %s\n\n%s\n", time.Now().Format("15:04:05"), status.Render())
+	_, err := fmt.Fprintf(w, "\n\n\n%s\n", status.Render())
 	if err != nil {
 		log.Error(err)
 	}
@@ -128,16 +129,25 @@ func Status(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	iter := firestoreClient.Collection("sensor-data").Documents(r.Context())
-	data := make([]map[string]interface{}, 0)
+	data := make([]*api.SensorData, 0)
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			log.Fatalf("Failed to iterate: %v", err)
+			log.Errorf("An error has occurred: %s", err)
+			http.Error(w, err.Error(), 500)
+			return
 		}
-		data = append(data, doc.Data())
+		var el api.SensorData
+		err = doc.DataTo(&el)
+		if err != nil {
+			log.Errorf("An error has occurred: %s", err)
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		data = append(data, &el)
 	}
 	err := json.NewEncoder(w).Encode(data)
 	if err != nil {
@@ -176,7 +186,7 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	} else {
 		// Write content-type, statuscode, payload
 		updateClient(clientId, len(data))
-		log.Infof("Stored %d documents", len(data))
+		log.Infof("Stored %d documents for client %s", len(data), clientId[:8])
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		// json.NewEncoder(w).Encode(data)
@@ -203,7 +213,7 @@ func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Param
 		}
 
 		d := api.SensorData{}
-		err = mapstructure.Decode(doc.Data(), &d)
+		err = doc.DataTo(&d)
 		if err != nil {
 			log.Errorf("An error has occurred: %s", err)
 			http.Error(w, err.Error(), 500)
@@ -231,5 +241,5 @@ func GetNearCars(w http.ResponseWriter, r *http.Request, params httprouter.Param
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	log.Infof("Sent %d documents", len(data))
+	log.Infof("Sent %d documents", len(nearCars))
 }

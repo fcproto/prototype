@@ -22,6 +22,7 @@ type Service struct {
 	log      *logrus.Logger
 	client   *http.Client
 	ClientID string
+	NearCars []*api.SensorData
 
 	bufferMutex sync.Mutex
 	bufferPos   int
@@ -138,23 +139,25 @@ func (s *Service) syncUp() error {
 }
 
 func (s *Service) syncDown() error {
-	req, err := http.NewRequest("GET", s.endpoint, nil)
+	req, err := http.NewRequest("GET", s.endpoint+"/near/"+s.ClientID, nil)
 	if err != nil {
 		return err
 	}
-
-	q := req.URL.Query()
-	q.Add("client-id", s.ClientID)
-	req.URL.RawQuery = q.Encode()
 
 	res, err := s.client.Do(req)
 	if err != nil {
 		return err
 	}
-
 	if res.StatusCode != 200 {
 		return fmt.Errorf("invalid status code %d", res.StatusCode)
 	}
+
+	var nearCars []*api.SensorData
+	err = json.NewDecoder(res.Body).Decode(&nearCars)
+	if err != nil {
+		return err
+	}
+	s.NearCars = nearCars
 	return nil
 }
 

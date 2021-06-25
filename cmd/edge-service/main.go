@@ -58,7 +58,7 @@ func main() {
 
 	go func() {
 		for {
-			log.Debug("syncing...")
+			log.Info("syncing...")
 			if err := service.Sync(); err != nil {
 				log.Error(err)
 			}

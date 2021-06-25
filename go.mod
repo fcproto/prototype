@@ -6,7 +6,6 @@ require (
 	cloud.google.com/go/firestore v1.5.0
 	github.com/jedib0t/go-pretty/v6 v6.2.2
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/mitchellh/mapstructure v1.4.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	google.golang.org/api v0.48.0
