@@ -62,6 +62,7 @@ func main() {
 			if err := service.Sync(); err != nil {
 				log.Error(err)
 			}
+			log.Infof("Cars nearby: %s", service.NearCars())
 			<-time.After(10 * time.Second)
 		}
 	}()

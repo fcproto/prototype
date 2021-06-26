@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,7 +23,7 @@ type Service struct {
 	log      *logrus.Logger
 	client   *http.Client
 	ClientID string
-	NearCars []*api.SensorData
+	nearCars []*api.SensorData
 
 	bufferMutex sync.Mutex
 	bufferPos   int
@@ -157,8 +158,17 @@ func (s *Service) syncDown() error {
 	if err != nil {
 		return err
 	}
-	s.NearCars = nearCars
+	s.nearCars = nearCars
 	return nil
+}
+
+func (s *Service) NearCars() string {
+	var builder strings.Builder
+	for _, c := range s.nearCars {
+		builder.WriteString(fmt.Sprintf("{Car[id=%s]}", c.ClientID[:8]))
+	}
+
+	return builder.String()
 }
 
 func (s *Service) Sync() error {
