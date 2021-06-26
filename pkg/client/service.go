@@ -58,7 +58,7 @@ func NewService(log *logrus.Logger, endpoint string, bufferSize int) (*Service, 
 }
 
 func createRandomId() []byte {
-	id := make([]byte, 32)
+	id := make([]byte, 12)
 	_, err := rand.Read(id)
 	if err != nil {
 		panic(err)

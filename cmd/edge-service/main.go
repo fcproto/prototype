@@ -28,6 +28,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	log.Infof("client id: %s", service.ClientID)
+
 	c := collector.New(log)
 	log.Info("registering sensors...")
 	c.RegisterSensor("gps", gps.NewSensor())
@@ -62,7 +64,7 @@ func main() {
 			if err := service.Sync(); err != nil {
 				log.Error(err)
 			}
-			log.Infof("Cars nearby: %s", service.NearCars())
+			log.Infof("cars nearby: %s", service.NearCars())
 			<-time.After(10 * time.Second)
 		}
 	}()

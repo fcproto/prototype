@@ -27,12 +27,13 @@ type clientInfo struct {
 	ClientID   string
 	LastUpdate time.Time
 	UpdateSize int
+	LastSpeed  float64
 }
 
 var clientStatusLock sync.Mutex
 var clientStatus = make([]*clientInfo, 0)
 
-func updateClient(id string, updateSize int) {
+func updateClient(id string, updateSize int, lastSpeed float64) {
 	clientStatusLock.Lock()
 	defer clientStatusLock.Unlock()
 
@@ -52,6 +53,7 @@ func updateClient(id string, updateSize int) {
 	}
 	info.LastUpdate = time.Now()
 	info.UpdateSize = updateSize
+	info.LastSpeed = lastSpeed
 }
 
 func createClient() *firestore.Client {
@@ -108,7 +110,7 @@ func main() {
 func Status(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	status := table.NewWriter()
 	status.SetStyle(table.StyleLight)
-	status.AppendHeader(table.Row{"#", "Client ID", "Last Update", "Update Size"})
+	status.AppendHeader(table.Row{"#", "Client ID", "Last Update", "Update Size", "Average Speed"})
 	status.AppendSeparator()
 
 	now := time.Now()
@@ -116,7 +118,8 @@ func Status(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	defer clientStatusLock.Unlock()
 	for i, info := range clientStatus {
 		lastUpdate := fmt.Sprintf("%.0fs ago", now.Sub(info.LastUpdate).Seconds())
-		status.AppendRow(table.Row{1 + i, info.ClientID[:8], lastUpdate, info.UpdateSize})
+		speed := fmt.Sprintf("%.2fm/s", info.LastSpeed)
+		status.AppendRow(table.Row{1 + i, info.ClientID[:8], lastUpdate, info.UpdateSize, speed})
 		status.AppendSeparator()
 	}
 
@@ -172,9 +175,11 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 	}
 
 	clientId := ""
+	lastSpeed := 0.0
 	for _, el := range data {
 		ref := firestoreClient.Collection("sensor-data").NewDoc()
 		clientId = el.ClientID
+		lastSpeed += el.Sensors["gps"]["speed"]
 		batch.Set(ref, el)
 	}
 
@@ -185,8 +190,9 @@ func StoreData(w http.ResponseWriter, r *http.Request, params httprouter.Params)
 		http.Error(w, err.Error(), 500)
 	} else {
 		// Write content-type, statuscode, payload
-		updateClient(clientId, len(data))
-		log.Infof("Stored %d documents for client %s", len(data), clientId[:8])
+		size := len(data)
+		updateClient(clientId, size, lastSpeed/float64(size))
+		log.Infof("Stored %d documents for client %s", size, clientId[:8])
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		// json.NewEncoder(w).Encode(data)
