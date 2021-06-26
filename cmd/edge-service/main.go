@@ -60,12 +60,12 @@ func main() {
 
 	go func() {
 		for {
+			<-time.After(10 * time.Second)
 			log.Info("syncing...")
 			if err := service.Sync(); err != nil {
 				log.Error(err)
 			}
 			log.Infof("cars nearby: %s", service.NearCars())
-			<-time.After(10 * time.Second)
 		}
 	}()
 
