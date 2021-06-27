@@ -52,7 +52,7 @@ Routes:
 - `GET /near/:client-id` Get most recent data from the nearest cars. The client sends its own id so the backend can query the data based on the latest info of the client
 - `GET /status` Get information about the latest activity of the backend
 
-Data format:
+[Data format](https://pkg.go.dev/github.com/fcproto/prototype@v0.0.0-20210627163231-16f2b268c81c/pkg/api#SensorData):
 ```json
 {
     "clientId": "e65d62a0ee46894268cd0dd5",
