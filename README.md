@@ -1,13 +1,15 @@
 # Fog Computing Prototyping Assignment
+[![CI](https://github.com/fcproto/prototype/workflows/CI/badge.svg?branch=master)](https://github.com/fcproto/prototype/actions?query=workflow%3ACI+branch%3Amaster)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/fcproto/prototype)](https://pkg.go.dev/github.com/fcproto/prototype)
 
 - [Introduction](#introduction)
+    * [Demo Video](#demo-video)
 - [Components](#components)
     * [Client](#client)
     * [Server](#server)
-- [Implementation](#implementation)
-    * [Build, run and deploy server](#build--run-and-deploy-server)
-        + [Locally](#locally)
-        + [Remote](#remote)
+- [Build, run and deploy server](#build--run-and-deploy-server)
+    * [Locally](#locally)
+    * [Remote](#remote)
     * [Build & Run edge-service](#build---run-edge-service)
 
 ## Introduction
@@ -28,7 +30,7 @@ The application consists of a local client and a server (cloud) part.
 
 Each client represents a car, consisting of a gateway connected to the internet and various (simulated) sensors.
 The gateway continuously collects, aggregates and locally stores the data from the sensors.
-Every 10 seconds the gateway sends all recent data to the server.
+Every ten seconds the gateway sends all recent data to the server.
 In turn, the cars query the server for the most recent data of other cars in the vicinity.
 
 ![FCProto](https://user-images.githubusercontent.com/15909811/123540954-ecc34b80-d741-11eb-9419-3ae42e13ee89.png)
@@ -78,11 +80,11 @@ Data format:
 
 ## Build, run and deploy server
 
-The backend uses Cloud Firestore, which must be set up:
+The backend uses Google Cloud Firestore, which must be set up:
 
 - Create [new project](https://cloud.google.com/resource-manager/docs/creating-managing-projects)
 - On the project dashboard open the navigation menu on the left and navigate to Firestore
-- Select Cloud Firestore in natice mode
+- Select Cloud Firestore in native mode
 - Select your preferred region and create the database
 
 ### Locally
