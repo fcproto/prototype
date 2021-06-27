@@ -90,9 +90,7 @@ The backend uses Cloud Firestore, which must be set up:
 When running the backend locally it needs a credential file to access Firestore:
 
 - On the project dashboard open the navigation menu on the left and go to _IAM & Admin > Service Accounts_
-- Click _Create Service Account_, give it some name and click _Create and Continue_
-- As role select _Basic > Owner_ and click _Done_
-- Select the created account
+- Select the default account
 - Go to the Keys tab and click _Create new key > JSON_ to download the credential file
 - Rename the downloaded credential file to `fcproto-credentials.json` and move it to root of the project
 
