@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	log := logger.New("sensor-test")
+	log := logger.New()
 	log.Info("starting")
 
 	dummySensor := dummy.NewSensor()

@@ -8,31 +8,32 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/fcproto/prototype/pkg/api"
-	"github.com/fcproto/prototype/pkg/logger"
-	"github.com/ipfs/go-log/v2"
+	"github.com/sirupsen/logrus"
 )
 
 const Timeout = time.Second * 3
 
 type Service struct {
 	endpoint string
-	log      *log.ZapEventLogger
+	log      *logrus.Logger
 	client   *http.Client
 	ClientID string
+	nearCars []*api.SensorData
 
 	bufferMutex sync.Mutex
 	bufferPos   int
 	buffer      []*api.SensorData
 }
 
-func NewService(endpoint string, bufferSize int) (*Service, error) {
+func NewService(log *logrus.Logger, endpoint string, bufferSize int) (*Service, error) {
 	svc := &Service{
 		endpoint: endpoint,
-		log:      logger.New("service"),
+		log:      log,
 		client: &http.Client{
 			Transport: &http.Transport{
 				TLSHandshakeTimeout:   Timeout,
@@ -57,7 +58,7 @@ func NewService(endpoint string, bufferSize int) (*Service, error) {
 }
 
 func createRandomId() []byte {
-	id := make([]byte, 32)
+	id := make([]byte, 12)
 	_, err := rand.Read(id)
 	if err != nil {
 		panic(err)
@@ -139,24 +140,35 @@ func (s *Service) syncUp() error {
 }
 
 func (s *Service) syncDown() error {
-	req, err := http.NewRequest("GET", s.endpoint, nil)
+	req, err := http.NewRequest("GET", s.endpoint+"/near/"+s.ClientID, nil)
 	if err != nil {
 		return err
 	}
-
-	q := req.URL.Query()
-	q.Add("client-id", s.ClientID)
-	req.URL.RawQuery = q.Encode()
 
 	res, err := s.client.Do(req)
 	if err != nil {
 		return err
 	}
-
 	if res.StatusCode != 200 {
 		return fmt.Errorf("invalid status code %d", res.StatusCode)
 	}
+
+	var nearCars []*api.SensorData
+	err = json.NewDecoder(res.Body).Decode(&nearCars)
+	if err != nil {
+		return err
+	}
+	s.nearCars = nearCars
 	return nil
+}
+
+func (s *Service) NearCars() string {
+	var builder strings.Builder
+	for _, c := range s.nearCars {
+		builder.WriteString(fmt.Sprintf("{Car[id=%s]}", c.ClientID[:8]))
+	}
+
+	return builder.String()
 }
 
 func (s *Service) Sync() error {
