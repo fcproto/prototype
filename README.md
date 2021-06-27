@@ -18,6 +18,9 @@ This data is shared among cars via the cloud to help for example autopilot syste
 
 The application is written in [Go](https://golang.org/) and the cloud part is hosted on [GCP](https://cloud.google.com/).
 
+### Demo Video
+
+[https://www.dropbox.com/s/3afh5fif4zs8aaz/prototype-demo.mov?dl=0](https://www.dropbox.com/s/3afh5fif4zs8aaz/prototype-demo.mov?dl=0)
 
 ## Components
 
