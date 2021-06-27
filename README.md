@@ -71,17 +71,33 @@ Data format:
 }
 ```
 
-## Implementation
 
-### Build, run and deploy server
+## Build, run and deploy server
 
-#### Locally
+The backend uses Cloud Firestore, which must be set up:
 
-* Install [air](https://github.com/cosmtrek/air)
-* Put GCP credential file `fcproto-credentials.json` in the root of the project (the credentials are needed for the Cloud Firestore access)
-* Run `air`
+- Create [new project](https://cloud.google.com/resource-manager/docs/creating-managing-projects)
+- On the project dashboard open the navigation menu on the left and navigate to Firestore
+- Select Cloud Firestore in natice mode
+- Select your preferred region and create the database
 
-#### Remote
+### Locally
+
+When running the backend locally it needs a credential file to access Firestore:
+
+- On the project dashboard open the navigation menu on the left and go to _IAM & Admin > Service Accounts_
+- Click _Create Service Account_, give it some name and click _Create and Continue_
+- As role select _Basic > Owner_ and click _Done_
+- Select the created account
+- Go to the Keys tab and click _Create new key > JSON_ to download the credential file
+- Rename the downloaded credential file to `fcproto-credentials.json` and move it to root of the project
+
+Run the backend locally:
+
+- Install [air](https://github.com/cosmtrek/air) on your system (provides auto reload on code changes and some other nice features)
+- Run `air`
+
+### Remote
 
 - Setup [gcloud cli](https://cloud.google.com/sdk/docs/quickstart)
 - Run cloud build: `gcloud builds submit --tag gcr.io/fcproto/server`
