@@ -18,6 +18,9 @@ This data is shared among cars via the cloud to help for example autopilot syste
 
 The application is written in [Go](https://golang.org/) and the cloud part is hosted on [GCP](https://cloud.google.com/).
 
+### Demo Video
+
+[https://www.dropbox.com/s/3afh5fif4zs8aaz/prototype-demo.mov?dl=0](https://www.dropbox.com/s/3afh5fif4zs8aaz/prototype-demo.mov?dl=0)
 
 ## Components
 
@@ -32,7 +35,8 @@ In turn, the cars query the server for the most recent data of other cars in the
 
 ### Client
 
-
+The client collects new data every second from the simulated sensors and transmits the measured values in batches to the cloud endpoint every ten seconds. It also supports higher sampling rates combined with different aggregations functions (mean average, minimum, and maximum). For example, the temperature is measured 20 times per second, and the aggregated average temperature is collected every second.
+In our demo scenario the clients were running on different Raspberry Pi boards.
 
 ### Server
 
