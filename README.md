@@ -12,11 +12,64 @@
 
 ## Introduction
 
+Our application for the prototyping assignment is placed in the domain of connected cars.
+Cars collect data with onboard sensors that is relevant for other cars in the vicinity, like current speed, position and direction.
+This data is shared among cars via the cloud to help for example autopilot systems.
+
+The application is written in [Go](https://golang.org/) and the cloud part is hosted on [GCP](https://cloud.google.com/).
+
+
 ## Components
+
+The application consists of a local client and a server (cloud) part.
+
+Each client represents a car, consisting of a gateway connected to the internet and various (simulated) sensors.
+The gateway continuously collects, aggregates and locally stores the data from the sensors.
+Every 10 seconds the gateway sends all recent data to the server.
+In turn, the cars query the server for the most recent data of other cars in the vicinity.
+
+![FCProto](https://user-images.githubusercontent.com/15909811/123540954-ecc34b80-d741-11eb-9419-3ae42e13ee89.png)
 
 ### Client
 
+
+
 ### Server
+
+The server is a cloud-hosted HTTP backend hosted on [Cloud Run](https://cloud.google.com/run). The data is stored with [Cloud Firestore](https://firebase.google.com/docs/firestore).  
+The public endpoint is available at https://server-ix6omulhiq-lm.a.run.app
+It provides routes to store and retrieve sensor data formatted as JSON:
+
+Routes:
+- `POST /`  Store sensor data
+- `GET /` Retrieve all data
+- `GET /near/:client-id` Get most recent data from the nearest cars. The client sends its own id so the backend can query the data based on the latest info of the client
+- `GET /status` Get information about the latest activity of the backend
+
+Data format:
+```json
+{
+    "clientId": "e65d62a0ee46894268cd0dd5",
+    "timestamp": "2021-06-26T20:08:35.978612Z",
+    "sensors": {
+        "compass": {
+            "rotation": 247.81560906021548
+        },
+        "gps": {
+            "acceleration": -1.4474247587797677,
+            "lat": 52.514659,
+            "lon": 13.44130264174134,
+            "speed": 10.643034842899365
+        },
+        "temperature/env": {
+            "temperature": 25.784328651657326
+        },
+        "temperature/track": {
+            "temperature": 31.17649297748596
+        }
+    }
+}
+```
 
 ## Implementation
 
@@ -25,17 +78,14 @@
 #### Locally
 
 * Install [air](https://github.com/cosmtrek/air)
-* Put GCP credential file `fcproto-credentials.json` in the root of the project
+* Put GCP credential file `fcproto-credentials.json` in the root of the project (the credentials are needed for the Cloud Firestore access)
 * Run `air`
 
 #### Remote
 
-- Setup gcloud cli
-
-```bash
-gcloud builds submit --tag gcr.io/fcproto/server
-gcloud run deploy server --image gcr.io/fcproto/server
-```
+- Setup [gcloud cli](https://cloud.google.com/sdk/docs/quickstart)
+- Run cloud build: `gcloud builds submit --tag gcr.io/fcproto/server`
+- Deploy: `gcloud run deploy server --image gcr.io/fcproto/server`
 
 ### Build & Run edge-service
 
