@@ -78,7 +78,7 @@ Routes:
 ```
 
 
-## Build, run and deploy server
+## Build, Run And Deploy Server And Client
 
 The backend uses Google Cloud Firestore, which must be set up:
 
@@ -87,7 +87,8 @@ The backend uses Google Cloud Firestore, which must be set up:
 - Select Cloud Firestore in native mode
 - Select your preferred region and create the database
 
-### Locally
+### Server
+#### Locally
 
 When running the backend locally it needs a credential file to access Firestore:
 
@@ -101,14 +102,17 @@ Run the backend locally:
 - Install [air](https://github.com/cosmtrek/air) on your system (provides auto reload on code changes and some other nice features)
 - Run `air`
 
-### Remote
+#### Remote Build And Deployment With Cloud Run
 
-- Setup [gcloud cli](https://cloud.google.com/sdk/docs/quickstart)
-- Run cloud build: `gcloud builds submit --tag gcr.io/fcproto/server`
-- Deploy: `gcloud run deploy server --image gcr.io/fcproto/server`
+- Setup the [gcloud cli](https://cloud.google.com/sdk/docs/quickstart) for this project: `gcloud init`
+- Run cloud build: `gcloud builds submit --tag gcr.io/<project-id>/<service-name>`
+   - When it asks to activate cloud build confirm with `y`
+- Deploy: `gcloud run deploy server --image gcr.io/<project-id>/<service-name>`
+   - When it asks to allow unauthenticated invocations select yes
+- The returned service url can be now used with the client
 
-### Build & Run edge-service
+### Client
 
-```bash
-go build -v -o ./bin/edge-service ./cmd/edge-service && ./bin/edge-service
-```
+- Build: `go build -v -o ./bin/edge-service ./cmd/edge-service`
+- Run: `CLOUD_ENDPOINT=<service-url> ./bin/edge-service`
+
