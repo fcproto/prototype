@@ -3,14 +3,15 @@
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/fcproto/prototype)](https://pkg.go.dev/github.com/fcproto/prototype)
 
 - [Introduction](#introduction)
-    * [Demo Video](#demo-video)
+  * [Demo Video](#demo-video)
 - [Components](#components)
-    * [Client](#client)
-    * [Server](#server)
-- [Build, run and deploy server](#build--run-and-deploy-server)
-    * [Locally](#locally)
-    * [Remote](#remote)
-    * [Build & Run edge-service](#build---run-edge-service)
+  * [Client](#client)
+  * [Server](#server)
+- [Build, Run And Deploy Server And Client](#build--run-and-deploy-server-and-client)
+  * [Server](#server-1)
+    + [Locally](#locally)
+    + [Remote Build And Deployment With Cloud Run](#remote-build-and-deployment-with-cloud-run)
+  * [Client](#client-1)
 
 ## Introduction
 
