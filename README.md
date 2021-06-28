@@ -7,7 +7,7 @@
 - [Components](#components)
   * [Client](#client)
   * [Server](#server)
-- [Build, Run And Deploy Server And Client](#build--run-and-deploy-server-and-client)
+- [Build, Run And Deploy Server And Client](#build-run-and-deploy-server-and-client)
   * [Server](#server-1)
     + [Locally](#locally)
     + [Remote Build And Deployment With Cloud Run](#remote-build-and-deployment-with-cloud-run)
