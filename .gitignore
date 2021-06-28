@@ -1,6 +1,6 @@
 .idea/
 bin/
 tmp/
-fcproto-credentials.json
+fcproto-credentials*.json
 client.id
 service-data.json
