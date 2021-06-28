@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -58,10 +59,53 @@ func updateClient(id string, updateSize int, lastSpeed float64) {
 
 func createClient() *firestore.Client {
 	// Sets your Google Cloud Platform project ID.
-	projectID := "fcproto"
+	var projectId string
+
+	// Sets thj Google Cloud Platform project ID.
+	if os.Getenv("APP_USER") == "air" {
+		// Server is running locally, so we look for the project id in the credential file
+		jsonFile, err := os.Open("fcproto-credentials.json")
+		if err != nil {
+			log.Fatal(err)
+		}
+		byteValue, _ := ioutil.ReadAll(jsonFile)
+		defer jsonFile.Close()
+
+		type ProjectID struct {
+			ProjectID string `json:"project_id"`
+		}
+		var projectIdStruct ProjectID
+		err = json.Unmarshal(byteValue, &projectIdStruct)
+		if err != nil {
+			log.Fatalf("The fcproto-credentials.json file seems to be malformed: %s", err)
+		}
+		projectId = projectIdStruct.ProjectID
+	} else if len(os.Getenv("K_SERVICE")) > 0 {
+		// Server runs on Cloud Run so we get the project id from the google metadata endpoint
+		url := "http://metadata.google.internal/computeMetadata/v1/project/project-id"
+		client := &http.Client{}
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		req.Header.Set("Metadata-Flavor", "Google")
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Fatal(err)
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		projectId = string(body)
+	} else {
+		log.Fatal("Cannot determine if the server runs locally or on Cloud Run. " +
+			"If you are trying to run the binary locally please use air " +
+			"as stated in the documentation")
+	}
 	ctx := context.Background()
 
-	client, err := firestore.NewClient(ctx, projectID)
+	client, err := firestore.NewClient(ctx, projectId)
 	if err != nil {
 		// panic if client cannot be created
 		log.Fatal(err)
